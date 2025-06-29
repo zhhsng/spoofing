@@ -125,12 +125,13 @@ class DnnSameOrNotClassifier(SameOrNotClassifier):
         activation = 'leaky_relu'
         neurons_per_layer = 512
 
-        def __init__(self):
+        def __init__(self, data_std=1.0):
             super().__init__()
+            self.data_std = data_std
             self.flatten = Flatten()
             self.d1 = Dense(self.neurons_per_layer,
                             activation=self.activation,
-                            kernel_regularizer=tf.keras.regularizers.L1(.14))
+                            kernel_regularizer=tf.keras.regularizers.L1(.14 * self.data_std))
             self.d2 = Dense(self.neurons_per_layer, activation=self.activation)
             self.d3 = Dense(self.neurons_per_layer, activation=self.activation)
             self.d4 = Dense(self.neurons_per_layer, activation=self.activation)
@@ -190,7 +191,7 @@ class DnnSameOrNotClassifier(SameOrNotClassifier):
     def __init__(self, num_epochs, run_eagerly=False, **kwargs):
 
         super().__init__(**kwargs)
-        self.model = self.SymmetricNet()
+        self.model = None
         self.num_epochs = num_epochs
         self.run_eagerly = run_eagerly
 
@@ -199,6 +200,9 @@ class DnnSameOrNotClassifier(SameOrNotClassifier):
 
     def _train(self, t_feat_pairs_train, v_same_train, t_feat_pairs_val,
                v_same_val):
+
+        data_std = float(np.std(t_feat_pairs_train))
+        self.model = self.SymmetricNet(data_std)
 
         self.model.compile(
             optimizer=tf.keras.optimizers.Adam(
